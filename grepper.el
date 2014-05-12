@@ -10,7 +10,11 @@
 
 (defun grepper--filter (proc output)
   (with-current-buffer (process-buffer proc)
-    (insert output)))
+    (let ((lines (split-string output "[\r\n]+" t))
+          parts)
+      (dolist (line lines)
+        (setq parts (split-string line "[ \t]*:[ \t]*"))
+        (insert (concat (mapconcat 'identity parts "\t") "\n"))))))
 
 (defun grepper--sentinel (proc status)
   (if (equal status "finished\n")
