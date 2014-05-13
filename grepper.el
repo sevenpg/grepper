@@ -32,6 +32,7 @@
         (insert (plist-get result :fileline))
         (move-to-column max-fileline t)
         (insert (format "  %s\n" (plist-get result :desc)))))
+    (goto-char (point-min))
     (grepper-result-mode)
     (pop-to-buffer (current-buffer))))
 
@@ -45,13 +46,21 @@
     (grepper--show-parse-results parse-results)))
 
 
+(defvar grepper-result-mode-map nil)
+(unless grepper-result-mode-map
+  (setq grepper-result-mode-map (make-sparse-keymap))
+  (define-key grepper-result-mode-map "n" 'next-line)
+  (define-key grepper-result-mode-map "p" 'previous-line))
+
 (defun grepper-result-mode ()
   (interactive)
   (kill-all-local-variables)
   (setq major-mode 'grepper-result-mode
         mode-name "grepper result"
         buffer-read-only t)
-  (set-buffer-modified-p nil))
+  (set-buffer-modified-p nil)
+  (use-local-map grepper-result-mode-map)
+  (run-hooks 'grepper-result-mode-hook))
 
 
 (defun grepper--git-grep-command (pattern)
