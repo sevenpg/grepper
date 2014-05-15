@@ -2,6 +2,15 @@
 (defvar grepper-git-grep-options "-n --full-name")
 (defvar grepper-tmp-buffer-name " *grepper tmp*")
 
+(defun grepper (pattern)
+  (interactive (list (grepper--read-pattern)))
+  (let ((cmd (grepper--git-grep-command pattern))
+        grep-result
+        parse-results)
+    (setq grep-result (grepper--get-grep-result cmd))
+    (setq parse-results (grepper--git-grep-parse grep-result))
+    (grepper--show-parse-results parse-results)))
+
 (defun grepper--read-pattern ()
   (let* ((default (thing-at-point 'symbol))
          (pattern (read-string (format "Pattern (default %s): " default))))
@@ -36,21 +45,13 @@
     (grepper-result-mode)
     (pop-to-buffer (current-buffer))))
 
-(defun grepper (pattern)
-  (interactive (list (grepper--read-pattern)))
-  (let ((cmd (grepper--git-grep-command pattern))
-        grep-result
-        parse-results)
-    (setq grep-result (grepper--get-grep-result cmd))
-    (setq parse-results (grepper--git-grep-parse grep-result))
-    (grepper--show-parse-results parse-results)))
-
 
 (defvar grepper-result-mode-map nil)
 (unless grepper-result-mode-map
   (setq grepper-result-mode-map (make-sparse-keymap))
   (define-key grepper-result-mode-map "n" 'next-line)
-  (define-key grepper-result-mode-map "p" 'previous-line))
+  (define-key grepper-result-mode-map "p" 'previous-line)
+  (define-key grepper-result-mode-map (kbd "RET") 'grepper-go-to-file))
 
 (defun grepper-result-mode ()
   (interactive)
@@ -61,6 +62,25 @@
   (set-buffer-modified-p nil)
   (use-local-map grepper-result-mode-map)
   (run-hooks 'grepper-result-mode-hook))
+
+(defun grepper-go-to-file ()
+  (interactive)
+  (let (file
+        line
+        beg-pos)
+    (save-excursion
+      (beginning-of-line)
+      (setq beg-pos (point))
+      (skip-chars-forward "^:")
+      (setq file (buffer-substring beg-pos (point)))
+      (forward-char)
+      (setq beg-pos (point))
+      (skip-chars-forward "[0-9]")
+      (setq line (buffer-substring beg-pos (point))))
+    (cd (replace-in-string (shell-command-to-string "git rev-parse --show-toplevel") "[\r\n]+$" ""))
+    (find-file-other-window file)
+    (goto-char (point-min))
+    (forward-line (1- (string-to-int line)))))
 
 
 (defun grepper--git-grep-command (pattern)
