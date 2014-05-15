@@ -1,15 +1,19 @@
 (defvar grepper-buffer-name "*grepper result*")
-(defvar grepper-git-grep-options "-n --full-name")
 (defvar grepper-tmp-buffer-name " *grepper tmp*")
+
+(defvar grepper-git-grep-options "-n --full-name")
+(defvar grepper-gtags-options "-x")
 
 (defun grepper (pattern)
   (interactive (list (grepper--read-pattern)))
-  (let ((cmd (grepper--git-grep-command pattern))
-        grep-result
-        parse-results)
+  (let* ((type "git-grep")
+         (cmd (funcall (intern (concat "grepper--" type "-command")) pattern))
+         grep-result
+         parse-results)
     (setq grep-result (grepper--get-grep-result cmd))
-    (setq parse-results (grepper--git-grep-parse grep-result))
+    (setq parse-results (funcall (intern (concat "grepper--" type "-parse")) grep-result))
     (grepper--show-parse-results parse-results)))
+
 
 (defun grepper--read-pattern ()
   (let* ((default (thing-at-point 'symbol))
@@ -80,7 +84,7 @@
     (cd (replace-in-string (shell-command-to-string "git rev-parse --show-toplevel") "[\r\n]+$" ""))
     (find-file-other-window file)
     (goto-char (point-min))
-    (forward-line (1- (string-to-int line)))))
+    (forward-line (1- (string-to-number line)))))
 
 
 (defun grepper--git-grep-command (pattern)
@@ -99,3 +103,11 @@
                     :desc (nth 2 parts)))
             lines)))
 
+
+(defun grepper--gtags-command (pattern)
+  (format "global %s \"%s\""
+          grepper-gtags-options
+          (shell-quote-argument pattern)))
+
+(defun grepper--gtags-parse (result)
+  (prin1-to-string result))
