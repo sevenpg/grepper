@@ -11,11 +11,11 @@
   (interactive (list (completing-read "program: " grepper-program-list nil t grepper-last-program)
                      (grepper--read-pattern)))
   (setq grepper-last-program program)
-  (let* ((cmd (funcall (intern (concat "grepper--" program "-command")) pattern))
+  (let* ((cmd (grepper--command pattern))
          grep-result
          parse-results)
     (setq grep-result (grepper--get-grep-result cmd))
-    (setq parse-results (funcall (intern (concat "grepper--" program "-parse")) grep-result))
+    (setq parse-results (grepper--parse grep-result))
     (grepper--show-parse-results parse-results)))
 
 
@@ -25,6 +25,16 @@
     (if (eq (length pattern) 0)
         default
       pattern)))
+
+(defun grepper--command (pattern)
+  (funcall (intern (concat "grepper--" grepper-last-program "-command")) pattern))
+
+(defun grepper--parse (grep-result)
+  (funcall (intern (concat "grepper--" grepper-last-program "-parse")) grep-result))
+
+(defun grepper--root-dir ()
+  (funcall (intern (concat "grepper--" grepper-last-program "-root-dir"))))
+
 
 (defun grepper--get-grep-result (cmd)
   (let (result)
@@ -50,10 +60,14 @@
         (move-to-column max-fileline t)
         (insert (format "  %s\n" (plist-get result :desc)))))
     (goto-char (point-min))
-    (cd (funcall (intern (concat "grepper--" program "-root-dir"))))
+    (cd (grepper--root-dir))
     (grepper-result-mode)
     (pop-to-buffer (current-buffer))))
 
+
+;;
+;; result-mode
+;;
 
 (defvar grepper-result-mode-map nil)
 (unless grepper-result-mode-map
@@ -91,6 +105,10 @@
     (forward-line (1- (string-to-number line)))))
 
 
+;;
+;; git-grep
+;;
+
 (defun grepper--git-grep-command (pattern)
   (format "git grep %s \"%s\" %s"
           grepper-git-grep-options
@@ -110,6 +128,10 @@
 (defun grepper--git-grep-root-dir ()
   (replace-in-string (shell-command-to-string "git rev-parse --show-toplevel") "[\r\n]+$" ""))
 
+
+;;
+;; gtags
+;;
 
 (defun grepper--gtags-command (pattern)
   (format "global %s \"%s\""
