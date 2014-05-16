@@ -74,6 +74,7 @@
   (setq grepper-result-mode-map (make-sparse-keymap))
   (define-key grepper-result-mode-map "n" 'next-line)
   (define-key grepper-result-mode-map "p" 'previous-line)
+  (define-key grepper-result-mode-map "q" 'kill-buffer)
   (define-key grepper-result-mode-map (kbd "RET") 'grepper-go-to-file))
 
 (defun grepper-result-mode ()
