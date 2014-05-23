@@ -9,34 +9,34 @@
 
 (defun grepper (program pattern)
   (interactive (list (completing-read "program: " grepper-program-list nil t grepper-last-program)
-                     (grepper--read-pattern)))
+                     (grepper-read-pattern)))
   (setq grepper-last-program program)
-  (let* ((cmd (grepper--command pattern))
+  (let* ((cmd (grepper-command pattern))
          grep-result
          parse-results)
-    (setq grep-result (grepper--get-grep-result cmd))
-    (setq parse-results (grepper--parse grep-result))
-    (grepper--show-parse-results parse-results)))
+    (setq grep-result (grepper-get-grep-result cmd))
+    (setq parse-results (grepper-parse grep-result))
+    (grepper-show-parse-results parse-results)))
 
 
-(defun grepper--read-pattern ()
+(defun grepper-read-pattern ()
   (let* ((default (thing-at-point 'symbol))
          (pattern (read-string (format "Pattern (default %s): " default))))
     (if (eq (length pattern) 0)
         default
       pattern)))
 
-(defun grepper--command (pattern)
-  (funcall (intern (concat "grepper--" grepper-last-program "-command")) pattern))
+(defun grepper-command (pattern)
+  (funcall (intern (concat "grepper-" grepper-last-program "-command")) pattern))
 
-(defun grepper--parse (grep-result)
-  (funcall (intern (concat "grepper--" grepper-last-program "-parse")) grep-result))
+(defun grepper-parse (grep-result)
+  (funcall (intern (concat "grepper-" grepper-last-program "-parse")) grep-result))
 
-(defun grepper--root-dir ()
-  (funcall (intern (concat "grepper--" grepper-last-program "-root-dir"))))
+(defun grepper-root-dir ()
+  (funcall (intern (concat "grepper-" grepper-last-program "-root-dir"))))
 
 
-(defun grepper--get-grep-result (cmd)
+(defun grepper-get-grep-result (cmd)
   (let (result)
     (with-current-buffer (get-buffer-create grepper-tmp-buffer-name)
       (erase-buffer)
@@ -45,11 +45,11 @@
       (kill-buffer))
     result))
 
-(defun grepper--show-parse-results (results)
+(defun grepper-show-parse-results (results)
   (if (eq (length results) 1)
       (let ((result (nth 0 results)))
-        (cd (grepper--root-dir))
-        (grepper--go-to-fileline (plist-get result :file)
+        (cd (grepper-root-dir))
+        (grepper-go-to-fileline (plist-get result :file)
                                  (plist-get result :line)
                                  nil))
     (with-current-buffer (get-buffer-create grepper-buffer-name)
@@ -66,7 +66,7 @@
           (move-to-column max-fileline t)
           (insert (format "  %s\n" (plist-get result :desc)))))
       (goto-char (point-min))
-      (cd (grepper--root-dir))
+      (cd (grepper-root-dir))
       (grepper-result-mode)
       (pop-to-buffer (current-buffer)))))
 
@@ -107,9 +107,9 @@
       (setq beg-pos (point))
       (skip-chars-forward "[0-9]")
       (setq line (buffer-substring beg-pos (point))))
-    (grepper--go-to-fileline file line t)))
+    (grepper-go-to-fileline file line t)))
 
-(defun grepper--go-to-fileline (file line other-window)
+(defun grepper-go-to-fileline (file line other-window)
   (if other-window
       (find-file-other-window file)
     (find-file file))
@@ -121,13 +121,13 @@
 ;; git-grep
 ;;
 
-(defun grepper--git-grep-command (pattern)
+(defun grepper-git-grep-command (pattern)
   (format "git grep %s \"%s\" %s"
           grepper-git-grep-options
           (shell-quote-argument pattern)
           "`git rev-parse --show-toplevel`"))
 
-(defun grepper--git-grep-parse (result)
+(defun grepper-git-grep-parse (result)
   (let ((lines (split-string result "[\r\n]+" t))
         parts)
     (mapcar (lambda (line)
@@ -137,20 +137,20 @@
                     :desc (nth 2 parts)))
             lines)))
 
-(defun grepper--git-grep-root-dir ()
-  (replace-in-string (shell-command-to-string "git rev-parse --show-toplevel") "[\r\n]+$" ""))
+(defun grepper-git-grep-root-dir ()
+  (replace-regexp-in-string "[\r\n]+$" "" (shell-command-to-string "git rev-parse -show-toplevel")))
 
 
 ;;
 ;; gtags
 ;;
 
-(defun grepper--gtags-command (pattern)
+(defun grepper-gtags-command (pattern)
   (format "global %s \"%s\""
           grepper-gtags-options
           (shell-quote-argument pattern)))
 
-(defun grepper--gtags-parse (result)
+(defun grepper-gtags-parse (result)
   (let ((lines (split-string result "[\r\n+]" t)))
     (mapcar (lambda (line)
               (unless (string-match "[ \t]+\\([0-9]+\\)[ \t]+\\([^ \t]+\\)[ \t]+\\(.*\\)$" line)
@@ -160,5 +160,5 @@
                     :desc (match-string 3 line)))
             lines)))
 
-(defun grepper--gtags-root-dir ()
-  (replace-in-string (shell-command-to-string "git rev-parse --show-toplevel") "[\r\n]+$" ""))
+(defun grepper-gtags-root-dir ()
+  (replace-regexp-in-string "[\r\n]+$" "" (shell-command-to-string "git rev-parse --show-toplevel")))
