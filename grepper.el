@@ -131,14 +131,15 @@
   (let ((lines (split-string result "[\r\n]+" t))
         parts)
     (mapcar (lambda (line)
-              (setq parts (split-string line "[ \t]*:[ \t]*"))
-              (list :file (nth 0 parts)
-                    :line (nth 1 parts)
-                    :desc (nth 2 parts)))
+              (unless (string-match "^\\([^:]+\\):\\([^:]+\\):\\(.+\\)$" line)
+                (error "Invalid line: %s" line))
+              (list :file (match-string 1 line)
+                    :line (match-string 2 line)
+                    :desc (match-string 3 line)))
             lines)))
 
 (defun grepper-git-grep-root-dir ()
-  (replace-regexp-in-string "[\r\n]+$" "" (shell-command-to-string "git rev-parse -show-toplevel")))
+  (replace-regexp-in-string "[\r\n]+$" "" (shell-command-to-string "git rev-parse --show-toplevel")))
 
 
 ;;
